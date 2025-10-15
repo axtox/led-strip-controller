@@ -1,0 +1,14 @@
+<Solution>
+  <Project Path="Axtox.IoT.Common/Axtox.IoT.Common.nfproj" Type="11a8dd76-328b-46df-9f39-f559912d0360" Id="53a06e2e-9bcd-4214-b2c0-a96450d926b7">
+    <Deploy />
+  </Project>
+  <Project Path="Axtox.IoT.Devices.Emitters/Axtox.IoT.Devices.Emitters.nfproj" Type="11a8dd76-328b-46df-9f39-f559912d0360" Id="b1d0d645-7576-4e7d-86eb-cef0c9681ba7">
+    <Deploy />
+  </Project>
+  <Project Path="Axtox.IoT.Devices.Sensors/Axtox.IoT.Devices.Sensors.nfproj" Type="11a8dd76-328b-46df-9f39-f559912d0360" Id="88dcf772-2b25-4a26-977f-92b9ebae7c70">
+    <Deploy />
+  </Project>
+  <Project Path="Axtox.IoT.LedStripController/Axtox.IoT.LedStripController.nfproj" Type="11a8dd76-328b-46df-9f39-f559912d0360">
+    <Deploy />
+  </Project>
+</Solution>
