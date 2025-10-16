@@ -6,13 +6,22 @@ using System.Device.I2c;
 
 namespace Axtox.IoT.Devices.Sensors.Measurment
 {
-    internal class InfraredDistanceMeasurmentDevice : IDisposable, IDistanceMeasurmentDevice
+    public class InfraredDistanceMeasurmentDevice : IDisposable, IDistanceMeasurmentDevice
     {
         public event Action<double> DistanceReady;
 
         private Vl53L0X _sensor;
         private GpioController _controller;
         private int _interruptPinId;
+
+        /// <summary>
+        /// Creates a new instance of the InfraredDistanceMeasurmentDevice with the defult I2C VL53L0X device address 
+        /// which is responsible to read distance values from the VL53L0X sensor.
+        /// </summary>
+        /// <param name="controller">The GPIO controller that is used to host the system</param>
+        /// <param name="interruptPinId">The GPIO pin that is used to listen for measurment ready signal from VL53L0X GPIO1 pin</param>
+        /// <param name="busId">I2C bus ID that VL53L0X is connected to</param>
+        public InfraredDistanceMeasurmentDevice(int interruptPinId, int busId) : this(new GpioController(), interruptPinId, busId, Vl53L0X.DefaultI2cAddress) { }
 
         /// <summary>
         /// Creates a new instance of the InfraredDistanceMeasurmentDevice which is responsible to read distance values from the VL53L0X sensor.

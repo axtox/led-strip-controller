@@ -1,26 +1,25 @@
 using Axtox.IoT.Common.Devices.Sensors.Measurment;
-using System.Threading;
+using System;
+using System.Diagnostics;
 
 namespace Axtox.IoT.Devices.Sensors
 {
-    internal class LinearGestureSensor
+    public class LinearGestureSensor
     {
-        public int OperatingRangeCm { get; init; } = 60;
-        public int DetectionThreshold { get; init; } = 15;
-        private IDistanceMeasurmentDevice _distanceMeasurmentDevice;
+        private int OperatingMaxRangeInMillimeters { get; init; } = 600;
+        private int OperatingMinRangeInMillimeters { get; init; } = 100;
+        private int OperatingThresholdInMillimeters { get; init; } = 10;
+        private int OperatingTimeoutInMilliecond { get; init; } = 150;
+        private int GestureActivationThresholdInMillimeters { get; init; } = 10;
+        private int GestureActivationTimeInMillisecond { get; init; } = 500;
 
-        private Timer _sensingTimer;
+        private IDistanceMeasurmentDevice _distanceMeasurmentDevice;
+        public event Action<int> GestureDetected;
 
         public LinearGestureSensor(IDistanceMeasurmentDevice distanceMeasurmentDevice)
         {
             _distanceMeasurmentDevice = distanceMeasurmentDevice;
-            _sensingTimer = new Timer(GestureDetection, null, 0, 350);
-
-            //var timer = new HighResTimer();
-            //timer.OnHighResTimerExpired += TimerExpired;
-
-            //timer.StartOnePeriodic(500); // Fires every 500 microseconds
-
+            _distanceMeasurmentDevice.DistanceReady += GestureDetection;
         }
 
         public void StartSensing()
@@ -33,20 +32,78 @@ namespace Axtox.IoT.Devices.Sensors
             _distanceMeasurmentDevice.StopMeasurment();
         }
 
-        private void GestureDetection(object state)
+        private bool _isActivated = false;
+        private DateTime _lastDetectionTime;
+        private double _lastDetectionDistance;
+        private void GestureDetection(double readings)
         {
-            var distance = _distanceMeasurmentDevice.DistanceInMillimeter / 10; // Convert to cm
-            if (distance > OperatingRangeCm)
+            if (readings > OperatingMaxRangeInMillimeters
+                || readings < OperatingMinRangeInMillimeters)
                 return;
 
-            if (distance < DetectionThreshold)
+            var timeFromLastChange = DateTime.UtcNow - _lastDetectionTime;
+            if (timeFromLastChange.TotalMilliseconds > OperatingTimeoutInMilliecond)
             {
-                // Too close, ignore
-                return;
+                _isActivated = false;
+                Debug.WriteLine($"Operation deactivated");
             }
-            // Process the distance value for gesture detection
-            // For example, you could log it or trigger an event
-            System.Console.WriteLine($"Detected distance: {distance} cm");
+
+            if (!_isActivated)
+            {
+                _isActivated = ShouldActivateGesture(readings);
+                if (_isActivated)
+                {
+                    GestureDetected?.Invoke((int)(((readings - OperatingMinRangeInMillimeters) / (OperatingMaxRangeInMillimeters - OperatingMinRangeInMillimeters)) * 100));
+                    Debug.WriteLine($"Operation activated");
+                }
+            }
+
+            Debug.WriteLine($"Detected distance: {readings} cm");
+        }
+
+        private DateTime _lastInteractionTime;
+        private double _lastInteractionDistance;
+        private bool ShouldActivateGesture(double distance)
+        {
+            Debug.WriteLine($"Starting activation detection with distance: {distance} mm");
+            //if it was not set then start the detection
+            if (IsActivationDetectionReset())
+            {
+                _lastInteractionDistance = distance;
+                _lastInteractionTime = DateTime.UtcNow;
+                Debug.WriteLine($"Looks like it's first time activation! Writing the distance and time.");
+                return false;
+            }
+
+            var elapsedTimeSinceLastInteraction = DateTime.UtcNow - _lastInteractionTime;
+            var distanceThresholdFromLastInteraction = Math.Abs(distance - _lastInteractionDistance);
+            Debug.WriteLine($"Elapsed time and distance difference from last activation: " +
+                $"{elapsedTimeSinceLastInteraction.TotalMilliseconds} ms and {distanceThresholdFromLastInteraction} mm");
+
+            if (distanceThresholdFromLastInteraction > GestureActivationThresholdInMillimeters)
+            {
+                Debug.WriteLine($"Oops! Distance threshold from last interaction is too big. Resetting the detection.");
+                ResetActivationDetectionState();
+                return false;
+            }
+
+            if (distanceThresholdFromLastInteraction <= GestureActivationThresholdInMillimeters
+                && elapsedTimeSinceLastInteraction.TotalMilliseconds > GestureActivationTimeInMillisecond)
+            {
+                Debug.WriteLine($"We're all set. Starting detection from now on.");
+                ResetActivationDetectionState();
+                return true;
+            }
+            return false;
+        }
+
+        private bool IsActivationDetectionReset()
+            => _lastInteractionDistance == 0 && _lastInteractionTime == default;
+
+        private void ResetActivationDetectionState()
+        {
+            _lastInteractionDistance = 0;
+            _lastInteractionTime = default;
         }
     }
 }
