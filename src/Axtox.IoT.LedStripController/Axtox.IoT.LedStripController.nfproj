@@ -36,7 +36,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Axtox.IoT.Common\Axtox.IoT.Common.nfproj" />
     <ProjectReference Include="..\Axtox.IoT.Devices.Emitters\Axtox.IoT.Devices.Emitters.nfproj" />
+    <ProjectReference Include="..\Axtox.IoT.Devices.Sensors\Axtox.IoT.Devices.Sensors.nfproj" />
   </ItemGroup>
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets')" />
   <ProjectExtensions>
