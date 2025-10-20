@@ -18,6 +18,13 @@
   </PropertyGroup>
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.props" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.props')" />
   <ItemGroup>
+    <Compile Include="Animations\AnimatedValue.cs" />
+    <Compile Include="Animations\BackgroundAnimator.cs" />
+    <Compile Include="Animations\EasingFunction.cs" />
+    <Compile Include="Animations\Settings\AnimationSettings.cs" />
+    <Compile Include="Animations\Settings\Exceptions\ConfigureSettingsMissing.cs" />
+    <Compile Include="Animations\IAnimatable.cs" />
+    <Compile Include="Animations\IAnimator.cs" />
     <Compile Include="Devices\Graphics\Displays\IDisplay.cs" />
     <Compile Include="Devices\Sensors\Measurment\IDistanceMeasurmentDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
