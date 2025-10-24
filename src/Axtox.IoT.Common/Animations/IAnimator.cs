@@ -44,6 +44,36 @@ namespace Axtox.IoT.Common.Animations
     public interface IAnimator : IDisposable
     {
         /// <summary>
+        /// Gets the current animation settings for this animator.
+        /// </summary>
+        /// <value>
+        /// An immutable copy of the <see cref="AnimationSettings"/> object containing the current
+        /// animation configuration.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        /// This property returns a clone of the internal settings to prevent external modifications
+        /// and ensure immutability. Changes to the returned object will not affect the animator's
+        /// actual settings. To modify animation settings, use the <see cref="Configure"/> method.
+        /// </para>
+        /// <para>
+        /// The returned settings reflect the values that will be used for the next animation started
+        /// via <see cref="Animate"/>. If <see cref="Configure"/> has not been called, this will
+        /// return the default settings.
+        /// </para>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// using var animator = new BackgroundAnimator();
+        /// animator.Configure(s => s.DurationInMilliseconds = 1000);
+        /// 
+        /// var currentSettings = animator.Settings;
+        /// // Modifying currentSettings will not affect the animator
+        /// </code>
+        /// </example>
+        AnimationSettings Settings { get; }
+
+        /// <summary>
         /// Configures the animation settings using a builder pattern.
         /// </summary>
         /// <param name="settingsBuilderMethod">A delegate that receives an <see cref="AnimationSettings"/> 

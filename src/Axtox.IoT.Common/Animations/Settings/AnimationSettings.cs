@@ -53,7 +53,7 @@ namespace Axtox.IoT.Common.Animations.Settings
         /// to complete immediately with the target value.
         /// </para>
         /// </remarks>
-        public int DurationInMilliseconds { get; set; } = 100;
+        public ushort DurationInMilliseconds { get; set; } = 100;
 
         /// <summary>
         /// Gets or sets the update interval in milliseconds between animation frames.
@@ -79,7 +79,7 @@ namespace Axtox.IoT.Common.Animations.Settings
         /// The actual update rate may vary based on system load and thread scheduling.
         /// </para>
         /// </remarks>
-        public int UpdateIntervalInMilliseconds { get; set; } = 5;
+        public ushort UpdateIntervalInMilliseconds { get; set; } = 5;
 
         /// <summary>
         /// Gets or sets the easing function style applied to the animation.

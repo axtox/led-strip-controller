@@ -1,161 +1,210 @@
-﻿using System;
-using System.Device.Gpio;
+using Axtox.IoT.Common.Animations;
+using Axtox.IoT.Common.Devices.Emitters.Lighting;
+using Axtox.IoT.Common.Storage;
+using Axtox.IoT.Devices.Emitters.Led.Storage;
+using System;
 using System.Device.Pwm;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Axtox.IoT.Devices.Emitters.Led
 {
-	public class LedDiode
-	{
-		private GpioController _gpioController;
-		private PwmChannel _pwm;
+    /// <summary>
+    /// Represents a PWM-controlled LED diode with state persistence and smooth brightness animations.
+    /// Supports graceful fade-in/fade-out transitions, brightness adjustment with easing animations,
+    /// and automatic restoration of last known state on power cycle.
+    /// </summary>
+    /// <remarks>
+    /// The LED diode uses PWM (Pulse Width Modulation) to control brightness levels smoothly.
+    /// State is persisted across power cycles using the provided <see cref="IStateStorage"/> implementation.
+    /// Brightness transitions are animated using the configured <see cref="IAnimator"/> with customizable easing styles.
+    /// 
+    /// <example>
+    /// Example usage for ESP32:
+    /// <code>
+    /// // Configure the pin for PWM functionality
+    /// Configuration.SetPinFunction(16, DeviceFunction.PWM1);
+    /// 
+    /// // Create animator with custom settings
+    /// IAnimator animator = new BackgroundAnimator();
+    /// animator.Configure(settings =>
+    /// {
+    ///     settings.DurationInMilliseconds = 500;
+    ///     settings.EasingStyle = EasingStyle.EaseInOutQuad;
+    /// });
+    /// 
+    /// // Initialize LED with state storage and animator
+    /// var led = new LedDiode(
+    ///     new Guid("d3f9a8b2-7c4e-4e9d-9a1f-2e6c1a5b8f3e"), 
+    ///     16, 
+    ///     new FileSystemJsonStateStorage(), 
+    ///     animator);
+    /// 
+    /// led.On();
+    /// led.SetBrightness(50);
+    /// led.Off();
+    /// led.Dispose();
+    /// </code>
+    /// </example>
+    /// </remarks>
+    public class LedDiode : ILed, IAnimatable, IDisposable
+    {
+        private readonly LedState LedState;
 
-		private bool _isInitialized = false;
-		private void Initialize(int startBrightness)
-		{
-			_pwm = PwmChannel.CreateFromPin(16, 40000, startBrightness / 100); // TODO: take startBrightness from filesystem
-			_pwm.Start();
+        private PwmChannel _pwm;
+        private IStateStorage _storage;
+        private IAnimator _animator;
 
-			_isInitialized = true;
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LedDiode"/> class with default animator settings.
+        /// </summary>
+        /// <param name="uniqueLedId">Unique identifier for the LED used for state persistence.</param>
+        /// <param name="pinNumber">The GPIO pin number that supports PWM signal output. 
+        /// Ensure the pin is configured for PWM functionality (e.g., Configuration.SetPinFunction(16, DeviceFunction.PWM1)).</param>
+        /// <param name="ledStateStorage">Storage implementation for persisting LED state across power cycles.</param>
+        /// <remarks>
+        /// This constructor uses a default animator with 1250ms duration and EaseInOutQuad easing style.
+        /// </remarks>
+        public LedDiode(Guid uniqueLedId, byte pinNumber, IStateStorage ledStateStorage) : this(uniqueLedId, pinNumber, ledStateStorage, CreateDefaultAnimator()) { }
 
-		public void SetBrightness(int brightness)
-		{
-			if (brightness < 0 || brightness > 100)
-				throw new ArgumentOutOfRangeException(nameof(brightness), "Brightness must be between 0 and 100.");
+        private static BackgroundAnimator CreateDefaultAnimator()
+        {
+            var animator = new BackgroundAnimator();
+            animator.Configure(settings =>
+            {
+                settings.DurationInMilliseconds = 1250;
+                settings.EasingStyle = EasingStyle.EaseInOutQuad;
+            });
+            return animator;
+        }
 
-			if (!_isInitialized)
-				Initialize(brightness);
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LedDiode"/> class with custom animator.
+        /// </summary>
+        /// <param name="uniqueLedId">Unique identifier for the LED used for state persistence.</param>
+        /// <param name="pinNumber">The GPIO pin number that supports PWM signal output. 
+        /// Ensure the pin is configured for PWM functionality before creating the LED instance.
+        /// Example: Configuration.SetPinFunction(16, DeviceFunction.PWM1) enables PWM on pin 16.</param>
+        /// <param name="ledStateStorage">Storage implementation for persisting LED state across power cycles.</param>
+        /// <param name="animator">Custom animator for controlling brightness transition effects and easing styles.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="ledStateStorage"/> or <paramref name="animator"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the provided <paramref name="pinNumber"/> does not match the stored LED state.</exception>
+        /// <remarks>
+        /// The LED will automatically restore its previous state (on/off and brightness) from storage.
+        /// If no previous state exists, the LED is initialized as off with maximum brightness setting.
+        /// The PWM frequency is set to 1000 Hz by default.
+        /// </remarks>
+        public LedDiode(Guid uniqueLedId, byte pinNumber, IStateStorage ledStateStorage, IAnimator animator)
+        {
+            _storage = ledStateStorage
+                ?? throw new ArgumentNullException(nameof(ledStateStorage), "Provided LED storage state is not valid.");
+            _animator = animator
+                ?? throw new ArgumentNullException(nameof(animator), "Provided animator is not valid.");
 
-			_pwm.DutyCycle = brightness / 100f;
-			// Keep the PWM running to maintain brightness
-			// In a real application, you might want to stop it later
-			// pwm.Stop();
-		}
+            LedState = ledStateStorage.Load(uniqueLedId, typeof(LedState)) as LedState;
+            LedState ??= new LedState
+            {
+                Key = uniqueLedId,
+                PinNumber = pinNumber,
+                IsOn = false,
+                Brightness = BrightnessLevel.Max
+            };
 
-		public void Unfade()
-		{
-			//Configuration.SetPinFunction(16, DeviceFunction.PWM1);
-			var pwm = PwmChannel.CreateFromPin(16, 40000, 0); // 50% duty cycle
-			pwm.Start();
+            if (LedState.PinNumber != pinNumber)
+                throw new ArgumentException("Provided pin number does not match the stored LED state.", nameof(pinNumber));
 
-			bool goingUp = true;
-			float dutyCycle = .00f;
-			while (true)
-			{
-				if (goingUp)
-				{
-					// slowly increase light intensity
-					dutyCycle += 0.05f;
+            _pwm = PwmChannel.CreateFromPin(LedState.PinNumber, 1000);
 
-					// change direction if reaching maximum duty cycle (100%)
-					if (dutyCycle > .95)
-						goingUp = !goingUp;
-				}
-				else
-				{
-					// slowly decrease light intensity
-					dutyCycle -= 0.05f;
+            if (LedState.IsOn)
+                On();
+            else
+                Off();
+        }
 
-					// change direction if reaching minimum duty cycle (0%)
-					if (dutyCycle < 0.10)
-						goingUp = !goingUp;
-				}
+        public void On()
+        {
+            ThrowIfDisposed();
 
-				// update duty cycle
-				pwm.DutyCycle = dutyCycle;
+            _pwm.DutyCycle = 0;
+            _pwm.Start();
 
-				Thread.Sleep(50);
-			}
+            SetBrightness(LedState.Brightness);
+            Thread.Sleep(_animator.Settings.DurationInMilliseconds);
+            LedState.IsOn = true;
+        }
 
-			pwm.Stop();
-		}
+        public void Off()
+        {
+            ThrowIfDisposed();
 
-		public void Blink()
-		{
-			_gpioController = new GpioController();
+            LedState.IsOn = false;
+            SetBrightness(BrightnessLevel.Min);
+            Thread.Sleep(_animator.Settings.DurationInMilliseconds);
 
-			// pick a board, uncomment one line for GpioPin; default is STM32F769I_DISCO
+            _pwm.Stop();
+        }
 
-			// DISCOVERY4: PD15 is LED6 
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('D', 15), PinMode.Output);
+        public void Blink(byte times = 4)
+        {
+            ThrowIfDisposed();
 
-			// ESP32 DevKit: 4 is a valid GPIO pin in, some boards like Xiuxin ESP32 may require GPIO Pin 2 instead.
-			GpioPin led = _gpioController.OpenPin(16, PinMode.Output);
+            for (int i = 0; i < times; i++)
+            {
+                On();
+                Off();
+            }
+        }
 
-			// FEATHER S2: 
-			//GpioPin led = s_GpioController.OpenPin(13, PinMode.Output);
+        public void SetBrightness(BrightnessLevel brightness)
+        {
+            ThrowIfDisposed();
 
-			// F429I_DISCO: PG14 is LEDLD4 
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('G', 14), PinMode.Output);
+            _animator.Animate(this, brightness.Level / 100f);
+            if (LedState.IsOn)
+                LedState.Brightness = brightness;
+            Debug.WriteLine($"Animating brightness to {brightness.Level}");
+        }
 
-			// NETDUINO 3 Wifi: A10 is LED onboard blue
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('A', 10), PinMode.Output);
+        public AnimatedValue GetCurrentValue() => new() { Value = (float)_pwm.DutyCycle };
+        public void SetAnimatedValue(AnimatedValue value) => _pwm.DutyCycle = value.Value;
 
-			// QUAIL: PE15 is LED1  
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('E', 15), PinMode.Output);
+        #region IDisposable
+        private bool disposed;
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    _storage.Save(LedState);
+                    if (_storage is IDisposable)
+                        (_storage as IDisposable).Dispose();
+                    _storage = null;
 
-			// STM32F091RC: PA5 is LED_GREEN
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('A', 5), PinMode.Output);
+                    Off();
+                    _animator.Dispose();
+                    _animator = null;
 
-			// STM32F746_NUCLEO: PB75 is LED2
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('B', 7), PinMode.Output);
+                    _pwm.Stop();
+                    _pwm.Dispose();
+                    _pwm = null;
+                }
 
-			//STM32F769I_DISCO: PJ5 is LD2
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('J', 5), PinMode.Output);
+                disposed = true;
+            }
+        }
 
-			// ST_B_L475E_IOT01A: PB14 is LD2
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('B', 14), PinMode.Output);
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
-			// STM32L072Z_LRWAN1: PA5 is LD2
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('A', 5), PinMode.Output);
-
-			// TI CC13x2 Launchpad: DIO_07 it's the green LED
-			//GpioPin led = s_GpioController.OpenPin(7, PinMode.Output);
-
-			// TI CC13x2 Launchpad: DIO_06 it's the red LED  
-			//GpioPin led = s_GpioController.OpenPin(6, PinMode.Output);
-
-			// ULX3S FPGA board: for the red D22 LED from the ESP32-WROOM32, GPIO5
-			//GpioPin led = s_GpioController.OpenPin(5, PinMode.Output);
-
-			// Silabs SLSTK3701A: LED1 PH14 is LLED1
-			//GpioPin led = s_GpioController.OpenPin(PinNumber('H', 14), PinMode.Output);
-
-			// Sparkfun Thing Plus - ESP32 WROOM 
-			//GpioPin led = s_GpioController.OpenPin(Gpio.IO13, PinMode.Output);
-
-			// RAK11200 on RAK5005/RAK19001/19007. The RAK19001 needs battery connected or power switch in rechargeable position
-			//GpioPin led = s_GpioController.OpenPin(Gpio.IO12, PinMode.Output); // LED1 Green
-			//GpioPin led = s_GpioController.OpenPin(Gpio.IO02, PinMode.Output); // LED2 Blue
-
-			// RAK2305 
-			//GpioPin led = s_GpioController.OpenPin(Gpio.IO18, PinMode.Output); // LED Green (Test LED) on device
-
-			// Aliexpress ESP32-WROOM32, GPIO2 - onboard not-power LED
-			// GpioPin led = s_GpioController.OpenPin(2, PinMode.Output);
-
-			led.Write(PinValue.Low);
-
-			while (true)
-			{
-				led.Toggle();
-				Thread.Sleep(125);
-				led.Toggle();
-				Thread.Sleep(125);
-				led.Toggle();
-				Thread.Sleep(125);
-				led.Toggle();
-				Thread.Sleep(525);
-			}
-		}
-
-		private int PinNumber(char port, byte pin)
-		{
-			if (port < 'A' || port > 'J')
-				throw new ArgumentException();
-
-			return ((port - 'A') * 16) + pin;
-		}
-	}
+        private void ThrowIfDisposed()
+        {
+            if (disposed)
+                throw new ObjectDisposedException($"You are trying to acces already disposed object: {nameof(LedDiode)}");
+        }
+        #endregion
+    }
 }

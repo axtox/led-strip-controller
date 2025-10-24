@@ -1,5 +1,4 @@
 using Axtox.IoT.Common.Animations.Settings;
-using Axtox.IoT.Common.Animations.Settings.Exceptions;
 using System;
 using System.Threading;
 
@@ -17,6 +16,13 @@ namespace Axtox.IoT.Common.Animations
         protected IAnimatable CurrentAnimatableTarget;
         protected AnimatedValue CurrentTargetValue;
 
+        public AnimationSettings Settings => new()
+        {
+            DurationInMilliseconds = settings.DurationInMilliseconds,
+            EasingStyle = settings.EasingStyle,
+            UpdateIntervalInMilliseconds = settings.UpdateIntervalInMilliseconds
+        };
+
         public BackgroundAnimator()
         {
             animatingThread = new Thread(AnimateThread);
@@ -26,11 +32,10 @@ namespace Axtox.IoT.Common.Animations
         public void Configure(AnimationSettingsBuilder settingsBuilderMethod)
         {
             ThrowIfDisposed();
-            settingsBuilderMethod(settings
-                ?? throw new ConfigureSettingsMissing($"Configuration is missing for the {nameof(BackgroundAnimator)}."));
+            settingsBuilderMethod(settings);
         }
 
-        private AutoResetEvent animationStartEvent = new(false);
+        private readonly AutoResetEvent animationStartEvent = new(false);
 
         public void Animate(IAnimatable target, AnimatedValue toValue)
         {
@@ -66,6 +71,9 @@ namespace Axtox.IoT.Common.Animations
 
                 lock (animationResourcesLock)
                 {
+                    if (!alive)
+                        return;
+
                     localTarget = CurrentAnimatableTarget;
                     localToValue = CurrentTargetValue;
                     from = localTarget.GetCurrentValue().Value;
@@ -116,6 +124,7 @@ namespace Axtox.IoT.Common.Animations
 
         private bool isDisposed;
         private bool alive = true;
+
         protected virtual void Dispose(bool disposing)
         {
             if (!isDisposed)
