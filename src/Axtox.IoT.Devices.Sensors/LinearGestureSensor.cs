@@ -1,26 +1,28 @@
 using Axtox.IoT.Common.Devices.Sensors.Measurment;
+using Axtox.IoT.Devices.Sensors.Gestures;
 using System;
 using System.Diagnostics;
 
 namespace Axtox.IoT.Devices.Sensors
 {
-    public class LinearGestureSensor
+    public delegate void GestureDetectedHandler(Gesture intensity);
     {
-        private int OperatingMaxRangeInMillimeters { get; init; } = 600;
-        private int OperatingMinRangeInMillimeters { get; init; } = 100;
-        private int OperatingThresholdInMillimeters { get; init; } = 10;
-        private int OperatingTimeoutInMilliecond { get; init; } = 150;
-        private int GestureActivationThresholdInMillimeters { get; init; } = 10;
-        private int GestureActivationTimeInMillisecond { get; init; } = 500;
+        private ushort OperatingMaxRangeInMillimeters { get; init; } = 600;
+        private ushort OperatingMinRangeInMillimeters { get; init; } = 100;
+        private ushort OperatingThresholdInMillimeters { get; init; } = 10;
+        private ushort OperatingTimeoutInMilliecond { get; init; } = 150;
+        private ushort GestureActivationThresholdInMillimeters { get; init; } = 10;
+        private ushort GestureActivationTimeInMillisecond { get; init; } = 500;
 
         private IDistanceMeasurmentDevice _distanceMeasurmentDevice;
-        public event Action<int> GestureDetected;
 
         public LinearGestureSensor(IDistanceMeasurmentDevice distanceMeasurmentDevice)
         {
             _distanceMeasurmentDevice = distanceMeasurmentDevice;
             _distanceMeasurmentDevice.DistanceReady += GestureDetection;
         }
+
+        public event GestureDetectedHandler GestureDetected;
 
         public void StartSensing()
         {
@@ -34,8 +36,8 @@ namespace Axtox.IoT.Devices.Sensors
 
         private bool _isActivated = false;
         private DateTime _lastDetectionTime;
-        private double _lastDetectionDistance;
-        private void GestureDetection(double readings)
+        private ushort _lastDetectionDistance;
+        private void GestureDetection(ushort readings)
         {
             if (readings > OperatingMaxRangeInMillimeters
                 || readings < OperatingMinRangeInMillimeters)
@@ -53,7 +55,7 @@ namespace Axtox.IoT.Devices.Sensors
                 _isActivated = ShouldActivateGesture(readings);
                 if (_isActivated)
                 {
-                    GestureDetected?.Invoke((int)(((readings - OperatingMinRangeInMillimeters) / (OperatingMaxRangeInMillimeters - OperatingMinRangeInMillimeters)) * 100));
+                GestureDetected?.Invoke((byte)(((readings - OperatingMinRangeInMillimeters) / (OperatingMaxRangeInMillimeters - OperatingMinRangeInMillimeters)) * 100));
                     Debug.WriteLine($"Operation activated");
                 }
             }
@@ -62,8 +64,8 @@ namespace Axtox.IoT.Devices.Sensors
         }
 
         private DateTime _lastInteractionTime;
-        private double _lastInteractionDistance;
-        private bool ShouldActivateGesture(double distance)
+        private ushort _lastInteractionDistance;
+        private bool ShouldActivateGesture(ushort distance)
         {
             Debug.WriteLine($"Starting activation detection with distance: {distance} mm");
             //if it was not set then start the detection

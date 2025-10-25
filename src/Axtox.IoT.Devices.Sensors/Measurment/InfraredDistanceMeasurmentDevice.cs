@@ -8,8 +8,6 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
 {
     public class InfraredDistanceMeasurmentDevice : IDisposable, IDistanceMeasurmentDevice
     {
-        public event Action<double> DistanceReady;
-
         private Vl53L0X _sensor;
         private GpioController _controller;
         private int _interruptPinId;
@@ -44,8 +42,9 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
             _interruptPinId = interruptPinId;
         }
 
+        public event DistanceReadyHandler DistanceReady;
 
-        public double DistanceInMillimeter => _sensor.Distance;
+        public ushort DistanceInMillimeter => _sensor.Distance;
 
         public void StartMeasurment()
         {
@@ -70,24 +69,26 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
         }
 
         #region IDisposable Support
-        private bool disposedValue;
+        private bool disposed;
         protected virtual void Dispose(bool disposing)
         {
-            if (disposedValue)
+            if (disposed)
                 return;
 
             if (disposing)
             {
                 // TODO: dispose managed state (managed objects)
                 DistanceReady = null;
-                _controller.UnregisterCallbackForPinValueChangedEvent(_interruptPinId, MeasurmentReady);
-                if (_controller.IsPinOpen(_interruptPinId))
-                    _controller.ClosePin(_interruptPinId);
-            }
+                StopMeasurment();
 
-            _sensor?.Dispose();
-            _controller?.Dispose();
-            disposedValue = true;
+                _sensor?.Dispose();
+                _sensor = null;
+
+                _controller?.Dispose();
+                _controller = null;
+
+            }
+            disposed = true;
         }
         ~InfraredDistanceMeasurmentDevice()
         {

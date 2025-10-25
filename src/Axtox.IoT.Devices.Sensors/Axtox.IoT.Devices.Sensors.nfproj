@@ -18,9 +18,13 @@
   </PropertyGroup>
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.props" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.props')" />
   <ItemGroup>
+    <Compile Include="Gestures\Gesture.cs" />
     <Compile Include="LinearGestureSensor.cs" />
     <Compile Include="Measurment\InfraredDistanceMeasurmentDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Axtox.IoT.Common\Axtox.IoT.Common.nfproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Iot.Device.Vl53L0X">
@@ -53,9 +57,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Axtox.IoT.Common\Axtox.IoT.Common.nfproj" />
   </ItemGroup>
   <Import Project="$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets" Condition="Exists('$(NanoFrameworkProjectSystemPath)NFProjectSystem.CSharp.targets')" />
   <ProjectExtensions>
