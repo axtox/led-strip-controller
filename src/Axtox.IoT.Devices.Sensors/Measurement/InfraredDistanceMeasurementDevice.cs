@@ -1,34 +1,34 @@
-using Axtox.IoT.Common.Devices.Sensors.Measurment;
+using Axtox.IoT.Common.Devices.Sensors.Measurement;
 using Iot.Device.Vl53L0X;
 using System;
 using System.Device.Gpio;
 using System.Device.I2c;
 
-namespace Axtox.IoT.Devices.Sensors.Measurment
+namespace Axtox.IoT.Devices.Sensors.Measurement
 {
-    public class InfraredDistanceMeasurmentDevice : IDisposable, IDistanceMeasurmentDevice
+    public class InfraredDistanceMeasurementDevice : IDisposable, IDistanceMeasurementDevice
     {
         private Vl53L0X _sensor;
         private GpioController _controller;
         private int _interruptPinId;
 
         /// <summary>
-        /// Creates a new instance of the InfraredDistanceMeasurmentDevice with the defult I2C VL53L0X device address 
+        /// Creates a new instance of the InfraredDistanceMeasurementDevice with the default I2C VL53L0X device address 
         /// which is responsible to read distance values from the VL53L0X sensor.
         /// </summary>
         /// <param name="controller">The GPIO controller that is used to host the system</param>
-        /// <param name="interruptPinId">The GPIO pin that is used to listen for measurment ready signal from VL53L0X GPIO1 pin</param>
+        /// <param name="interruptPinId">The GPIO pin that is used to listen for measurement ready signal from VL53L0X GPIO1 pin</param>
         /// <param name="busId">I2C bus ID that VL53L0X is connected to</param>
-        public InfraredDistanceMeasurmentDevice(int interruptPinId, int busId) : this(new GpioController(), interruptPinId, busId, Vl53L0X.DefaultI2cAddress) { }
+        public InfraredDistanceMeasurementDevice(int interruptPinId, int busId) : this(new GpioController(), interruptPinId, busId, Vl53L0X.DefaultI2cAddress) { }
 
         /// <summary>
-        /// Creates a new instance of the InfraredDistanceMeasurmentDevice which is responsible to read distance values from the VL53L0X sensor.
+        /// Creates a new instance of the InfraredDistanceMeasurementDevice which is responsible to read distance values from the VL53L0X sensor.
         /// </summary>
         /// <param name="controller">The GPIO controller that is used to host the system</param>
-        /// <param name="interruptPinId">The GPIO pin that is used to listen for measurment ready signal from VL53L0X GPIO1 pin</param>
+        /// <param name="interruptPinId">The GPIO pin that is used to listen for measurement ready signal from VL53L0X GPIO1 pin</param>
         /// <param name="busId">I2C bus ID that VL53L0X is connected to</param>
         /// <param name="deviceAddress">I2C VL53L0X device address</param>
-        public InfraredDistanceMeasurmentDevice(GpioController controller, int interruptPinId, int busId, int deviceAddress)
+        public InfraredDistanceMeasurementDevice(GpioController controller, int interruptPinId, int busId, int deviceAddress)
         {
             var i2cDevice = I2cDevice.Create(new I2cConnectionSettings(busId, deviceAddress));
             _sensor = new Vl53L0X(i2cDevice);
@@ -46,7 +46,7 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
 
         public ushort DistanceInMillimeter => _sensor.Distance;
 
-        public void StartMeasurment()
+        public void StartMeasurement()
         {
             _sensor.StartContinuousMeasurement();
 
@@ -54,7 +54,7 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
             _controller.RegisterCallbackForPinValueChangedEvent(_interruptPinId, PinEventTypes.Falling, MeasurmentReady);
         }
 
-        public void StopMeasurment()
+        public void StopMeasurement()
         {
             _sensor.Reset();
 
@@ -77,9 +77,8 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
 
             if (disposing)
             {
-                // TODO: dispose managed state (managed objects)
                 DistanceReady = null;
-                StopMeasurment();
+                StopMeasurement();
 
                 _sensor?.Dispose();
                 _sensor = null;
@@ -89,10 +88,6 @@ namespace Axtox.IoT.Devices.Sensors.Measurment
 
             }
             disposed = true;
-        }
-        ~InfraredDistanceMeasurmentDevice()
-        {
-            Dispose(disposing: false);
         }
         public void Dispose()
         {

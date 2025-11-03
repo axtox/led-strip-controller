@@ -1,7 +1,7 @@
-using Axtox.IoT.Common.Devices.Sensors.Measurment;
+using Axtox.IoT.Common.Devices.Sensors.Measurement;
+using Axtox.IoT.Common.System.Logging;
 using Axtox.IoT.Devices.Sensors.Gestures;
 using System;
-using System.Diagnostics;
 
 namespace Axtox.IoT.Devices.Sensors
 {
@@ -14,24 +14,26 @@ namespace Axtox.IoT.Devices.Sensors
         private ushort GestureActivationThresholdInMillimeters { get; init; } = 10;
         private ushort GestureActivationTimeInMillisecond { get; init; } = 500;
 
-        private IDistanceMeasurmentDevice _distanceMeasurmentDevice;
+        private IDistanceMeasurementDevice _distanceMeasurementDevice;
+        private ILogger _logger;
 
-        public LinearGestureSensor(IDistanceMeasurmentDevice distanceMeasurmentDevice)
+        public LinearGestureSensor(IDistanceMeasurementDevice distanceMeasurementDevice, ILogger logger)
         {
-            _distanceMeasurmentDevice = distanceMeasurmentDevice;
-            _distanceMeasurmentDevice.DistanceReady += GestureDetection;
+            _logger = logger;
+            _distanceMeasurementDevice = distanceMeasurementDevice;
+            _distanceMeasurementDevice.DistanceReady += GestureDetection;
         }
 
         public event GestureDetectedHandler GestureDetected;
 
         public void StartSensing()
         {
-            _distanceMeasurmentDevice.StartMeasurment();
+            _distanceMeasurementDevice.StartMeasurement();
         }
 
         public void StopSensing()
         {
-            _distanceMeasurmentDevice.StopMeasurment();
+            _distanceMeasurementDevice.StopMeasurement();
         }
 
         private bool _isActivated = false;

@@ -1,12 +1,12 @@
-namespace Axtox.IoT.Common.Devices.Sensors.Measurment
+namespace Axtox.IoT.Common.Devices.Sensors.Measurement
 {
     public delegate void DistanceReadyHandler(ushort distanceInMillimeter);
 
-    public interface IDistanceMeasurmentDevice
+    public interface IDistanceMeasurementDevice
     {
         event DistanceReadyHandler DistanceReady;
         ushort DistanceInMillimeter { get; }
-        void StartMeasurment();
-        void StopMeasurment();
+        void StartMeasurement();
+        void StopMeasurement();
     }
 }

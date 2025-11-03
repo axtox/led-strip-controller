@@ -20,7 +20,7 @@
   <ItemGroup>
     <Compile Include="Gestures\Gesture.cs" />
     <Compile Include="LinearGestureSensor.cs" />
-    <Compile Include="Measurment\InfraredDistanceMeasurmentDevice.cs" />
+    <Compile Include="Measurement\InfraredDistanceMeasurementDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
