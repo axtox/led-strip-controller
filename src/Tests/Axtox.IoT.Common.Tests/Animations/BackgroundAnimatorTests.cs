@@ -1,4 +1,5 @@
 using Axtox.IoT.Common.Animations;
+using Axtox.IoT.Common.System.Logging;
 using nanoFramework.TestFramework;
 using System;
 using System.Threading;
@@ -39,6 +40,9 @@ namespace Axtox.IoT.Common.Tests.Animations
             }
         }
 
+        private BackgroundAnimator CreateConfiguredAnimator()
+            => new(new ConsoleLogger("UnitTestAnimator", LogLevel.Debug));
+
         #endregion
 
         #region Constructor Tests
@@ -47,7 +51,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Constructor_ShouldCreateInstance_WhenCalled()
         {
             // Arrange & Act
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
 
             // Assert
             Assert.IsNotNull(animator);
@@ -61,7 +65,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Configure_ShouldApplySettings_WhenValidSettingsProvided()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var settingsApplied = false;
 
             // Act
@@ -81,7 +85,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Configure_ShouldThrowObjectDisposedException_WhenDisposed()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
             animator.Dispose();
 
             // Act & Assert
@@ -99,7 +103,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldAnimateToTargetValue_WhenValidTargetProvided()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -121,7 +125,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldCallSetAnimatedValueMultipleTimes_DuringAnimation()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -143,7 +147,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldThrowArgumentNullException_WhenTargetIsNull()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
 
             // Act & Assert
             Assert.ThrowsException(typeof(ArgumentNullException), () =>
@@ -156,7 +160,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldThrowObjectDisposedException_WhenDisposed()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable();
             animator.Dispose();
 
@@ -171,7 +175,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldCompleteImmediately_WhenFromAndToValuesAreEqual()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.5f };
             animator.Configure(settings =>
             {
@@ -190,12 +194,12 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldInterruptPreviousAnimation_WhenNewAnimationStarted()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
-                settings.DurationInMilliseconds = 200;
-                settings.UpdateIntervalInMilliseconds = 10;
+                settings.DurationInMilliseconds = 100;
+                settings.UpdateIntervalInMilliseconds = 1;
             });
 
             // Act
@@ -212,7 +216,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldUseDefaultSettings_WhenNotConfigured()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
 
             // Act
@@ -232,7 +236,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Abort_ShouldStopAnimation_WhenAnimationIsRunning()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -258,7 +262,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Abort_ShouldDoNothing_WhenNoAnimationIsRunning()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
 
             // Act & Assert (should not throw)
             animator.Abort();
@@ -268,7 +272,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Abort_ShouldThrowObjectDisposedException_WhenDisposed()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
             animator.Dispose();
 
             // Act & Assert
@@ -282,7 +286,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Abort_ShouldLeaveTargetAtIntermediateValue_WhenCalledDuringAnimation()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -307,7 +311,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Dispose_ShouldStopAnimation_WhenAnimationIsRunning()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -330,7 +334,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Dispose_ShouldAllowMultipleCalls_WithoutException()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
 
             // Act & Assert (should not throw)
             animator.Dispose();
@@ -341,7 +345,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Dispose_ShouldPreventFurtherOperations_AfterDisposal()
         {
             // Arrange
-            var animator = new BackgroundAnimator();
+            var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable();
             animator.Dispose();
 
@@ -370,7 +374,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldHandleVeryShortDuration_Correctly()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -390,7 +394,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldHandleNegativeToPositiveTransition_Correctly()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = -1.0f };
             animator.Configure(settings =>
             {
@@ -410,7 +414,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldBeThreadSafe_WhenCalledFromMultipleThreads()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
@@ -438,12 +442,12 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldHandleRapidAbortAndRestart_Correctly()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub = new StubAnimatable { CurrentValue = 0.0f };
             animator.Configure(settings =>
             {
-                settings.DurationInMilliseconds = 200;
-                settings.UpdateIntervalInMilliseconds = 10;
+                settings.DurationInMilliseconds = 100;
+                settings.UpdateIntervalInMilliseconds = 1;
             });
 
             // Act
@@ -451,7 +455,7 @@ namespace Axtox.IoT.Common.Tests.Animations
             Thread.Sleep(20);
             animator.Abort();
             animator.Animate(stub, new AnimatedValue { Value = 0.0f });
-            Thread.Sleep(250);
+            Thread.Sleep(300);
 
             // Assert
             Assert.AreEqual(0.0f, stub.CurrentValue);
@@ -461,7 +465,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldHandleDifferentAnimatables_Correctly()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub1 = new StubAnimatable { CurrentValue = 0.0f };
             var stub2 = new StubAnimatable { CurrentValue = 10.0f };
             animator.Configure(settings =>
@@ -483,7 +487,7 @@ namespace Axtox.IoT.Common.Tests.Animations
         public void Animate_ShouldHandleConcurrentAnimatables_Correctly()
         {
             // Arrange
-            using var animator = new BackgroundAnimator();
+            using var animator = CreateConfiguredAnimator();
             var stub1 = new StubAnimatable { CurrentValue = 0.0f };
             var stub2 = new StubAnimatable { CurrentValue = 10.0f };
             animator.Configure(settings =>
