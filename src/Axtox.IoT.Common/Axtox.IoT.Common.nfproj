@@ -33,6 +33,8 @@
     <Compile Include="Storage\IState.cs" />
     <Compile Include="Storage\IStateStorage.cs" />
     <Compile Include="System\Extensions\TypeExtesions.cs" />
+    <Compile Include="System\Logging\ConsoleLogger.cs" />
+    <Compile Include="System\Logging\ILogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib">
